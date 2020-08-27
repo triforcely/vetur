@@ -1,11 +1,11 @@
 {
   "name": "vetur",
-  "displayName": "Vetur",
-  "description": "Vue tooling for VS Code",
-  "author": "Pine Wu <octref@gmail.com>",
+  "displayName": "Vetur-SFC",
+  "description": "Cutom vetur build with some fixes",
+  "author": "Michał Wilski <michal@wil.ski>",
   "icon": "asset/vue.png",
-  "version": "0.26.1",
-  "publisher": "octref",
+  "version": "0.1.1",
+  "publisher": "mwilski",
   "scripts": {
     "postinstall": "run-s install:*",
     "install:server": "cd server && yarn",
