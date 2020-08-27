@@ -53,6 +53,20 @@ export interface EventInfo extends PositionInfo, MemberInfo {}
 export interface PositionInfo {
   position?: Range;
 }
+export interface PropInfo {
+  name: string;
+  detailed: boolean;
+  required: boolean;
+  documentation?: string;
+}
+export interface DataInfo {
+  name: string;
+  documentation?: string;
+}
+export interface ComputedInfo {
+  name: string;
+  documentation?: string;
+}
 
 export interface MemberInfo {
   name: string;
