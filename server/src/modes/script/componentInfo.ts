@@ -122,20 +122,25 @@ function getProps(
     if (!tsModule.isObjectLiteralExpression(propertyValue)) {
       return { detailed: false, required: true };
     }
+    const propertyValueSymbol = checker.getTypeAtLocation(propertyValue).symbol;
+    const requiredValue = propertyValueSymbol?.members?.get('required' as ts.__String)?.valueDeclaration;
+    const defaultValue = propertyValueSymbol?.members?.get('default' as ts.__String)?.valueDeclaration;
+    if (!requiredValue && !defaultValue) {
+      return { detailed: false, required: true };
+    }
 
-    function isRequired(propertyValue: ts.ObjectLiteralExpression) {
-      const propertyValueSymbol = checker.getSymbolAtLocation(propertyValue);
-      const requiredValue = propertyValueSymbol?.members?.get('required' as ts.__String)?.valueDeclaration;
-      if (!requiredValue || !tsModule.isPropertyAssignment(requiredValue)) {
-        return false;
-      }
-      if (requiredValue?.initializer.kind === tsModule.SyntaxKind.TrueKeyword) {
+    function isRequired() {
+      if (
+        requiredValue &&
+        tsModule.isPropertyAssignment(requiredValue) &&
+        requiredValue?.initializer.kind === tsModule.SyntaxKind.TrueKeyword
+      ) {
         return true;
       }
       return false;
     }
 
-    return { required: isRequired(propertyValue), detailed: true };
+    return { required: isRequired(), detailed: true };
   }
 
   function getClassProps(type: ts.Type) {
@@ -159,28 +164,18 @@ function getProps(
           : false
       )?.expression as ts.CallExpression;
       const decoratorName = decoratorExpr.expression.getText();
-      const args = decoratorExpr.arguments;
-
-      const firstNode = args[0];
+      const [firstNode, secondNode] = decoratorExpr.arguments;
       if (decoratorName === 'PropSync' && tsModule.isStringLiteral(firstNode)) {
         return {
           name: firstNode.text,
-          ...getPropStatus(args[1]),
-          documentation: buildDocumentation(tsModule, propSymbol, checker)
-        };
-      }
-
-      if (decoratorName === 'Model') {
-        return {
-          name: propSymbol.name,
-          ...getPropStatus(args[1]),
+          ...getPropStatus(secondNode),
           documentation: buildDocumentation(tsModule, propSymbol, checker)
         };
       }
 
       return {
         name: propSymbol.name,
-        ...getPropStatus(args[0]),
+        ...getPropStatus(decoratorName === 'Model' ? secondNode : firstNode),
         documentation: buildDocumentation(tsModule, propSymbol, checker)
       };
     });
@@ -222,7 +217,7 @@ function getProps(
      *   props: {
      *     foo: { type: Boolean, default: true },
      *     bar: { type: String, default: 'bar' },
-     *     cac: String
+     *     car: String
      *   }
      * }
      * ```
