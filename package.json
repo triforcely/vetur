@@ -1,7 +1,7 @@
 {
   "name": "vetur",
   "displayName": "Vetur-SFC",
-  "description": "Cutom vetur build with some fixes",
+  "description": "Custom vetur build with some fixes",
   "author": "Michał Wilski <michal@wil.ski>",
   "icon": "asset/vue.png",
   "version": "0.1.2",
