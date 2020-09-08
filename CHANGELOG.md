@@ -1,5 +1,9 @@
 # Changelog
 
+### 0.1.4
+
+- merged https://github.com/vuejs/vetur/pull/2260
+
 ### 0.1.3
 
 - fix vls crash
