@@ -41,10 +41,18 @@ function traverseNodes(nodes: Node[], f: (n: Node) => any) {
 }
 
 function generateDiagnostic(n: Node, definedProps: PropInfo[], document: TextDocument): Diagnostic | undefined {
+  // Ignore diagnostic when have `v-bind`, `v-bind:[key]`, `:[key]`
+  if (n.attributeNames.some(prop => prop === 'v-bind' || prop.startsWith('v-bind:[') || prop.startsWith(':['))) {
+    return undefined;
+  }
+
   const seenProps = n.attributeNames.map(attr => {
     return {
       name: attr,
-      normalized: normalizeHtmlAttributeNameToKebabCase(attr)
+      normalized: normalizeHtmlAttributeNameToKebabCase(
+        attr,
+        definedProps.find(prop => prop.isBoundToModel)?.name ?? 'value'
+      )
     };
   });
 
@@ -68,7 +76,7 @@ function generateDiagnostic(n: Node, definedProps: PropInfo[], document: TextDoc
   }
 
   return {
-    severity: missingProps.some(p => p.detailed) ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+    severity: missingProps.some(p => p.hasObjectValidator) ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
     message: `<${n.tag}> misses props: ${missingProps.map(p => p.normalized).join(', ')}\n`,
     range: {
       start: document.positionAt(n.start),
@@ -77,13 +85,28 @@ function generateDiagnostic(n: Node, definedProps: PropInfo[], document: TextDoc
   };
 }
 
-function normalizeHtmlAttributeNameToKebabCase(attr: string) {
+function normalizeHtmlAttributeNameToKebabCase(attr: string, modelProp: string) {
   let result = attr;
+
+  // v-model.trim
+  if (!result.startsWith('v-model:') && result.startsWith('v-model')) {
+    return kebabCase(modelProp);
+  }
+
+  // Allow `v-model:prop` in vue 3
+  if (result.startsWith('v-model:')) {
+    result = attr.slice('v-model:'.length);
+  }
 
   if (result.startsWith('v-bind:')) {
     result = attr.slice('v-bind:'.length);
   } else if (result.startsWith(':')) {
     result = attr.slice(':'.length);
+  }
+
+  // Remove modifiers
+  if (result.includes('.')) {
+    result = result.slice(0, result.indexOf('.'));
   }
 
   result = kebabCase(result);

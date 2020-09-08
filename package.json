@@ -4,7 +4,7 @@
   "description": "Custom vetur build with some fixes",
   "author": "Michał Wilski <michal@wil.ski>",
   "icon": "asset/vue.png",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "mwilski",
   "scripts": {
     "postinstall": "run-s install:*",
@@ -245,6 +245,11 @@
           "type": "boolean",
           "default": true,
           "description": "Validate vue-html in <template> using eslint-plugin-vue"
+        },
+        "vetur.validation.templateProps": {
+          "type": "boolean",
+          "default": false,
+          "description": "Validate props usage in <template> region. Show error/warning for not passing declared props to child components."
         },
         "vetur.validation.interpolation": {
           "type": "boolean",
@@ -523,19 +528,19 @@
   "devDependencies": {
     "@types/glob": "^7.1.3",
     "@types/js-yaml": "^3.12.5",
-    "@types/lodash": "^4.14.160",
+    "@types/lodash": "^4.14.161",
     "@types/minimist": "^1.2.0",
     "@types/mocha": "^8.0.3",
-    "@types/node": "^14.6.1",
+    "@types/node": "^14.6.4",
     "@types/shelljs": "^0.8.8",
     "@types/vscode": "^1.47.0",
     "fs-extra": "^9.0.1",
     "glob": "^7.1.6",
     "husky": "^4.2.5",
     "js-yaml": "^3.14.0",
-    "lint-staged": "^10.2.13",
+    "lint-staged": "^10.3.0",
     "minimist": "^1.2.5",
-    "mocha": "^8.1.2",
+    "mocha": "^8.1.3",
     "ncp": "^2.0.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.1.1",

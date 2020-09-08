@@ -55,8 +55,20 @@ export interface PositionInfo {
 }
 export interface PropInfo {
   name: string;
-  detailed: boolean;
+  /**
+   * `true` if
+   * props: {
+   *   foo: { ... }
+   * }
+   *
+   * `false` if
+   * - `props: ['foo']`
+   * - `props: { foo: String }`
+   *
+   */
+  hasObjectValidator: boolean;
   required: boolean;
+  isBoundToModel: boolean;
   documentation?: string;
 }
 export interface DataInfo {

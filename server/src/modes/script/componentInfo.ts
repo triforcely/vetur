@@ -115,32 +115,59 @@ function getProps(
   const result: PropInfo[] = getClassAndObjectInfo(ts, defaultExportType, checker, doc, getClassProps, getObjectProps);
   return result.length === 0 ? undefined : result;
 
-  function getPropStatus(propertyValue: ts.Node | undefined): { detailed: boolean; required: boolean } {
-    if (!propertyValue) {
-      return { detailed: false, required: true };
+  function markPropBoundToModel(type: ts.Type, props: PropInfo[]) {
+    function markValuePropBoundToModel() {
+      return props.map(prop => {
+        if (prop.name === 'value') {
+          prop.isBoundToModel = true;
+        }
+        return prop;
+      });
     }
-    if (!tsModule.isObjectLiteralExpression(propertyValue)) {
-      return { detailed: false, required: true };
+
+    const modelSymbol = checker.getPropertyOfType(type, 'model');
+    const modelValue = (modelSymbol?.valueDeclaration as ts.PropertyAssignment)?.initializer;
+    // Set value prop when no model def
+    if (!modelSymbol || !modelValue) {
+      return markValuePropBoundToModel();
     }
+
+    const modelType = checker.getTypeOfSymbolAtLocation(modelSymbol, modelValue);
+    const modelPropSymbol = checker.getPropertyOfType(modelType, 'prop');
+    const modelPropValue = (modelPropSymbol?.valueDeclaration as ts.PropertyAssignment)?.initializer;
+    if (!modelPropValue || !tsModule.isStringLiteral(modelPropValue)) {
+      return markValuePropBoundToModel();
+    }
+
+    return props.map(prop => {
+      if (prop.name === modelPropValue.text) {
+        prop.isBoundToModel = true;
+      }
+      return prop;
+    });
+  }
+
+  function getPropValidatorInfo(
+    propertyValue: ts.Node | undefined
+  ): { hasObjectValidator: boolean; required: boolean } {
+    if (!propertyValue || !tsModule.isObjectLiteralExpression(propertyValue)) {
+      return { hasObjectValidator: false, required: true };
+    }
+
     const propertyValueSymbol = checker.getTypeAtLocation(propertyValue).symbol;
     const requiredValue = propertyValueSymbol?.members?.get('required' as ts.__String)?.valueDeclaration;
     const defaultValue = propertyValueSymbol?.members?.get('default' as ts.__String)?.valueDeclaration;
     if (!requiredValue && !defaultValue) {
-      return { detailed: false, required: true };
+      return { hasObjectValidator: false, required: true };
     }
 
-    function isRequired() {
-      if (
-        requiredValue &&
+    const required = Boolean(
+      requiredValue &&
         tsModule.isPropertyAssignment(requiredValue) &&
         requiredValue?.initializer.kind === tsModule.SyntaxKind.TrueKeyword
-      ) {
-        return true;
-      }
-      return false;
-    }
+    );
 
-    return { required: isRequired(), detailed: true };
+    return { hasObjectValidator: true, required };
   }
 
   function getClassProps(type: ts.Type) {
@@ -168,14 +195,16 @@ function getProps(
       if (decoratorName === 'PropSync' && tsModule.isStringLiteral(firstNode)) {
         return {
           name: firstNode.text,
-          ...getPropStatus(secondNode),
+          ...getPropValidatorInfo(secondNode),
+          isBoundToModel: false,
           documentation: buildDocumentation(tsModule, propSymbol, checker)
         };
       }
 
       return {
         name: propSymbol.name,
-        ...getPropStatus(decoratorName === 'Model' ? secondNode : firstNode),
+        ...getPropValidatorInfo(decoratorName === 'Model' ? secondNode : firstNode),
+        isBoundToModel: decoratorName === 'Model',
         documentation: buildDocumentation(tsModule, propSymbol, checker)
       };
     });
@@ -201,8 +230,9 @@ function getProps(
         .map(expr => {
           return {
             name: (expr as ts.StringLiteral).text,
-            detailed: false,
+            hasObjectValidator: false,
             required: true,
+            isBoundToModel: false,
             documentation: `\`\`\`js\n${formatJSLikeDocumentation(
               propsDeclaration.parent.getFullText().trim()
             )}\n\`\`\`\n`
@@ -227,12 +257,13 @@ function getProps(
 
       return checker.getPropertiesOfType(propsType).map(s => {
         const status = tsModule.isPropertyAssignment(s.valueDeclaration)
-          ? getPropStatus(s.valueDeclaration.initializer)
-          : { detailed: false, required: true };
+          ? getPropValidatorInfo(s.valueDeclaration.initializer)
+          : { hasObjectValidator: false, required: true };
 
         return {
           name: s.name,
           ...status,
+          isBoundToModel: false,
           documentation: buildDocumentation(tsModule, s, checker)
         };
       });
@@ -660,7 +691,7 @@ function getPropertyDecoratorNames(property: ts.Symbol, checkSyntaxKind: ts.Synt
 
 export function getPropertyDecorators(property: ts.Symbol, checkSyntaxKind: ts.SyntaxKind): ts.NodeArray<ts.Decorator> {
   if (
-    property.valueDeclaration.kind !== checkSyntaxKind ||
+    property?.valueDeclaration?.kind !== checkSyntaxKind ||
     property.declarations.length === 0 ||
     property.declarations[0].decorators === undefined
   ) {
