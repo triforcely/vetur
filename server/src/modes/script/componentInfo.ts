@@ -538,7 +538,7 @@ function getClassAndObjectInfo<C, O>(
 }
 
 function getPropertyDecoratorNames(property: ts.Symbol, checkSyntaxKind: ts.SyntaxKind): string[] {
-  if (property.valueDeclaration.kind !== checkSyntaxKind) {
+  if (property?.valueDeclaration?.kind !== checkSyntaxKind) {
     return [];
   }
 
